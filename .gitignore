@@ -3,3 +3,5 @@ dist/
 .vim/
 *.vim
 *.sw[po]
+tsconfig.tsbuildinfo
+yarn-error.log
