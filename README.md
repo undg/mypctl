@@ -1,16 +1,11 @@
-# App name
+# mypctl
 
-install dependencies
-    yarn
-    
-build and run
-    yarn build
-    
-run in dev mode
-    yard dev
-
-run tests
-    yarn test
-    
-run tests in watch mode
-    yarn test:w
+Options:
+      --version  Show version number 
+  -u, --up                           
+  -d, --down                         
+      --mute                         
+      --unmute                       
+  -n, --normal   75%                 
+  -m, --max      150%                
+  -h, --help     Show help           
