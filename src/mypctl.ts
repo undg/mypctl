@@ -3,9 +3,8 @@ import { execSync } from 'child_process'
 import Mustache from 'mustache'
 import yargs from 'yargs'
 
-const unix = {
-    echo: 'echo hello and hi',
-    sinks: 'pacmd list-sinks | grep index | cut -d : -f 2',
+const cmd = {
+    allSinks: 'pacmd list-sinks | grep index | cut -d : -f 2',
     volUp: 'pactl set-sink-volume {{sink}} +5%',
     volDown: 'pactl set-sink-volume {{sink}} -5%',
     unmute: 'pactl set-sink-mute {{sink}} 0',
@@ -14,24 +13,8 @@ const unix = {
     max: 'pactl set-sink-volume {{sink}} 150%',
 }
 
-const sinksStdout = run(unix.sinks)
-const sinks = sinksStdout ? sinksStdout.split(/\r?\n/).filter((line) => !!line) : []
-
-function run(cmd: string) {
-    try {
-        const stdout = execSync(cmd)
-        return stdout.toString()
-    } catch (err) {
-        console.error(err)
-    }
-}
-
-function runSinks(unixCmd: string): void {
-    sinks.forEach((sink) => run(Mustache.render(unixCmd, { sink })))
-}
-
 const argv = yargs
-    .command('copy.js', 'Copy files.')
+    .command('mypctl', 'Pulse audio cli interface.')
     .option('up', {
         alias: 'u',
         description: '',
@@ -64,27 +47,45 @@ const argv = yargs
     .alias('help', 'h').argv
 
 if (argv.up) {
-    runSinks(unix.unmute)
-    runSinks(unix.volUp)
+    runSinks(cmd.unmute)
+    runSinks(cmd.volUp)
     console.log('up')
 }
 if (argv.down) {
-    runSinks(unix.volDown)
+    runSinks(cmd.volDown)
     console.log('down')
 }
 if (argv.mute) {
-    runSinks(unix.mute)
+    runSinks(cmd.mute)
     console.log('mute')
 }
 if (argv.unmute) {
-    runSinks(unix.unmute)
+    runSinks(cmd.unmute)
     console.log('unmute')
 }
 if (argv.normal) {
-    runSinks(unix.normal)
+    runSinks(cmd.normal)
     console.log('normal')
 }
 if (argv.max) {
-    runSinks(unix.max)
+    runSinks(cmd.max)
     console.log('max')
 }
+
+
+const sinksStdout = run(cmd.allSinks)
+const sinks = sinksStdout ? sinksStdout.split(/\r?\n/).filter((line) => !!line) : []
+
+function run(cmd: string) {
+    try {
+        const stdout = execSync(cmd)
+        return stdout.toString()
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+function runSinks(cmd: string): void {
+    sinks.forEach((sink) => run(Mustache.render(cmd, { sink })))
+}
+
