@@ -11,7 +11,13 @@ const cmd = {
     mute: 'pactl set-sink-mute {{sink}} ',
     normal: 'pactl set-sink-volume {{sink}} 75%',
     max: 'pactl set-sink-volume {{sink}} 150%',
+    getVolume: "pactl get-sink-volume {{sink}} | awk '{print $7}'",
 }
+
+const sinksStdout = run(cmd.allSinks)
+const sinks = sinksStdout
+    ? sinksStdout.split(/\r?\n/).filter((line) => !!line)
+    : []
 
 const argv = yargs
     .command('mypctl', 'Pulse audio cli interface.')
@@ -72,10 +78,6 @@ if (argv.max) {
     console.log('max')
 }
 
-
-const sinksStdout = run(cmd.allSinks)
-const sinks = sinksStdout ? sinksStdout.split(/\r?\n/).filter((line) => !!line) : []
-
 function run(cmd: string) {
     try {
         const stdout = execSync(cmd)
@@ -85,7 +87,13 @@ function run(cmd: string) {
     }
 }
 
-function runSinks(cmd: string): void {
-    sinks.forEach((sink) => run(Mustache.render(cmd, { sink })))
-}
+function runSinks(command: string) {
+    sinks.forEach((sink) => {
+        const dB = run(Mustache.render(cmd.getVolume, { sink })) ?? '0'
+        const volMax = JSON.parse(dB) > 11
+        const dont = argv.up && volMax
+        if (dont) return
 
+        run(Mustache.render(command, { sink }))
+    })
+}
