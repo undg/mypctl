@@ -93,7 +93,7 @@ function run(cmd: string) {
 function runSinks(command: Command) {
     sinks.forEach((sink) => {
         const dB = run(Mustache.render(cmd.getVolume, { sink })) ?? '0'
-        const volMax = JSON.parse(dB) > 11
+        const volMax = JSON.parse(dB) > 16
         const dont = argv.up && volMax
 
         if (dont) return
