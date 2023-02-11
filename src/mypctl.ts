@@ -12,7 +12,9 @@ const cmd = {
     normal: 'pactl set-sink-volume {{sink}} 75%',
     max: 'pactl set-sink-volume {{sink}} 150%',
     getVolume: "pactl get-sink-volume {{sink}} | awk '{print $7}'",
-}
+} as const
+
+type Command = (typeof cmd)[keyof typeof cmd]
 
 const sinksStdout = run(cmd.allSinks)
 const sinks = sinksStdout
@@ -81,17 +83,19 @@ if (argv.max) {
 function run(cmd: string) {
     try {
         const stdout = execSync(cmd)
+
         return stdout.toString()
     } catch (err) {
         console.error(err)
     }
 }
 
-function runSinks(command: string) {
+function runSinks(command: Command) {
     sinks.forEach((sink) => {
         const dB = run(Mustache.render(cmd.getVolume, { sink })) ?? '0'
         const volMax = JSON.parse(dB) > 11
         const dont = argv.up && volMax
+
         if (dont) return
 
         run(Mustache.render(command, { sink }))
