@@ -2,23 +2,23 @@
 import { execSync } from 'child_process'
 import Mustache from 'mustache'
 import yargs from 'yargs'
+import { Sinks } from './type-pactl-list-sinks'
 
 const cmd = {
-    allSinks: 'pacmd list-sinks | grep index | cut -d : -f 2',
+    sinksJson: 'pactl -f json list sinks',
     volUp: 'pactl set-sink-volume {{sink}} +5%',
     volDown: 'pactl set-sink-volume {{sink}} -5%',
     unmute: 'pactl set-sink-mute {{sink}} 0',
     mute: 'pactl set-sink-mute {{sink}} ',
     normal: 'pactl set-sink-volume {{sink}} 75%',
-    max: 'pactl set-sink-volume {{sink}} 150%',
-    getVolume: "pactl get-sink-volume {{sink}} | awk '{print $7}'",
+    max: 'pactl set-sink-volume {{sink}} 150%', // technically there is no max.
 } as const
 
-type Command = (typeof cmd)[keyof typeof cmd]
+type Cmd = (typeof cmd)[keyof typeof cmd]
 
-const sinksStdout = run(cmd.allSinks)
+const sinksStdout: Sinks = JSON.parse(run(cmd.sinksJson))
 const sinks = sinksStdout
-    ? sinksStdout.split(/\r?\n/).filter((line) => !!line)
+    ? sinksStdout.filter((sink) => sink.active_port !== null)
     : []
 
 const argv = yargs
@@ -87,17 +87,20 @@ function run(cmd: string) {
         return stdout.toString()
     } catch (err) {
         console.error(err)
+        return ''
     }
 }
 
-function runSinks(command: Command) {
-    sinks.forEach((sink) => {
-        const dB = run(Mustache.render(cmd.getVolume, { sink })) ?? '0'
-        const volMax = JSON.parse(dB) > 16
-        const dont = argv.up && volMax
+function runSinks(command: Cmd) {
+    for (const sink of sinks) {
+        for (const volType in sink.volume) {
+            const full = 2 ** 16 // 100%
+            const limit = full * 2 - (full*0.05) // with 5% correction for async it's 200%
+            const value = sink.volume[volType].value
+            // Limit max volume up to this value.
+            if (argv.up && value >= limit) return
+        }
 
-        if (dont) return
-
-        run(Mustache.render(command, { sink }))
-    })
+        run(Mustache.render(command, { sink: sink.index }))
+    }
 }
